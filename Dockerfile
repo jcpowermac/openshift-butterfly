@@ -25,6 +25,8 @@ RUN chown -R ${USER_UID}:0 ${APP_ROOT} && \
     chmod -R ug+x ${APP_ROOT}/bin && \
     chmod -R g+rw ${APP_ROOT} /etc/passwd
 
+ENV PATH=$PATH:${APP_ROOT}/bin
+
 EXPOSE 57575
 USER ${USER_UID}
 
