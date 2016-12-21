@@ -1,0 +1,148 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: butterfly-ephemeral
+objects:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations: null 
+    name: ${NAME} 
+  spec:
+    ports:
+    - name: ${NAME}
+      port: 57575
+      protocol: TCP
+      targetPort: 57575
+    selector:
+      name: ${NAME}
+    sessionAffinity: None
+    type: ClusterIP
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    annotations: null
+    generation: 1
+    name: ${NAME} 
+  spec:
+    tags:
+    - annotations: null
+      from:
+        kind: DockerImage
+        name: ${NAME}:latest
+      generation: null
+      importPolicy: {}
+      name: latest
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    annotations: null
+    generation: 6
+    name: ${NAME} 
+  spec:
+    replicas: 1
+    selector:
+      name: ${NAME}
+    strategy:
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        annotations: null
+        creationTimestamp: null
+        labels:
+          name: ${NAME}
+        name: ${NAME}
+      spec:
+        containers:
+        - image: ' ' 
+          imagePullPolicy: Always
+          name: ${NAME}
+          ports:
+          - containerPort: 57575
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+    test: false
+    triggers:
+    - type: ConfigChange
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - ${NAME} 
+        from:
+          kind: ImageStreamTag
+          name: ${NAME}:latest
+      type: ImageChange
+- apiVersion: v1
+  kind: BuildConfig
+  metadata:
+    annotations: null
+    labels:
+      name: ${NAME} 
+    name: ${NAME} 
+  spec:
+    output:
+      to:
+        kind: ImageStreamTag
+        name: ${NAME}:latest 
+    postCommit: {}
+    resources: {}
+    runPolicy: Serial
+    source:
+      git:
+        uri: ${SOURCE_REPOSITORY_URL}
+      type: Git
+    strategy:
+      dockerStrategy: null
+      type: Docker
+    triggers:
+    - github:
+        secret: ${GITHUB_WEBHOOK_SECRET} 
+      type: GitHub
+    - type: ConfigChange
+    - imageChange: {}
+      type: ImageChange
+  status:
+    lastVersion: 0
+- apiVersion: v1
+  kind: Route
+  metadata:
+    annotations: null
+    labels:
+      name: ${NAME}
+    name: ${NAME}
+  spec:
+    host: ${APPLICATION_DOMAIN} 
+    to:
+      kind: Service
+      name: ${NAME} 
+      weight: 100
+parameters:
+- description: The name assigned to all of the frontend objects defined in this template.
+  displayName: Name
+  name: NAME
+  required: true
+  value: butterfly 
+- description: A secret string used to configure the GitHub webhook.
+  displayName: GitHub Webhook Secret
+  from: '[a-zA-Z0-9]{40}'
+  generate: expression
+  name: GITHUB_WEBHOOK_SECRET
+- description: The URL of the repository with your application source code
+  value: https://github.com/jcpowermac/openshift-butterfly
+  required: true
+  name: SOURCE_REPOSITORY_URL
+- name: APPLICATION_DOMAIN
+  description: The exposed hostname that will route to the butterfly service, if left blank a value will be defaulted.
+  value: ""
