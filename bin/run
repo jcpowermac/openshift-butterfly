@@ -1,0 +1,5 @@
+#!/bin/sh
+id
+whoami
+/usr/bin/butterfly.server.py --unsecure --port=57575 --host=0.0.0.0 --conf=${APP_CONF}/butterfly.conf --ssl-dir=${APP_CONF}/ssl
+

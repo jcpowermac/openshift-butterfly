@@ -15,13 +15,19 @@ RUN yum install -y epel-release && \
     yum clean all
 
 # Create user
-RUN mkdir -p ${APP_CONF}/ssl 
-RUN useradd -l -u ${USER_UID} -r -g 0 -d ${APP_ROOT} -s /bin/bash -c "${USER_NAME} application user" ${USER_NAME}
-COPY butterfly.conf ${APP_CONF}
-RUN chown -R ${USER_UID}:0 ${APP_ROOT}
+RUN mkdir -p ${APP_CONF}/ssl && \
+    useradd -l -u ${USER_UID} -r -g 0 -d ${APP_ROOT} -s /bin/bash -c "${USER_NAME} application user" ${USER_NAME}
+
+COPY butterfly.conf ${APP_CONF} 
+COPY bin/ ${APP_ROOT}/bin/
+
+RUN chown -R ${USER_UID}:0 ${APP_ROOT} && \
+    chmod -R ug+x ${APP_ROOT}/bin && \
+    chmod -R g+rw ${APP_ROOT} /etc/passwd
 
 EXPOSE 57575
 USER ${USER_UID}
 
-ENTRYPOINT ["/usr/bin/butterfly.server.py"]
-CMD ["--unsecure", "--port=57575", "--host=0.0.0.0", "--conf=/opt/butterfly/etc/butterfly.conf", "--ssl-dir=/opt/butterfly/etc/ssl"]
+RUN sed "s@${USER_NAME}:x:${USER_UID}:0@${USER_NAME}:x:\${USER_ID}:\${GROUP_ID}@g" /etc/passwd > ${APP_ROOT}/etc/passwd.template
+ENTRYPOINT ["uid_entrypoint"]
+CMD run
